@@ -1,71 +1,26 @@
 <script lang="ts">
-	import { page } from '$app/stores';
-	import Login from './Login.svelte';
-	import User from './User.svelte';
-	import Todo from './Todo.svelte';
-	import { todos } from '$lib/stores';
-	import { onMount } from 'svelte';
-
-	let channel: undefined | BroadcastChannel;
-	onMount(async () => {
-		channel = new BroadcastChannel('thechannel');
-		channel.onmessage = (event) => {
-			todos.set(event.data);
-		};
-	});
-	const addTodo = async () => {
-		if (name !== '') {
-			todos.update((todos) => {
-				const newTodo = {
-					id: self.crypto.randomUUID(),
-					text: name,
-					done: false
-				};
-				return [...todos, newTodo];
-			});
-			name = '';
-			channel?.postMessage($todos);
-		}
-	};
-
-	const toggleTodo = (id: number) => {
-		todos.update((todos: any) => {
-			const todo = todos.find((todo: any) => todo.id === id);
-			todo!.done = !todo!.done;
-			return todos;
+	let url;
+	const getFeed = async (feed) => {
+		const response = await fetch(`/api/add`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ feed })
 		});
-		channel?.postMessage($todos);
+		const data = await response.json();
+		url = await data.match(/<enclosure url="(.*)" length/)[1];
 	};
-
-	const deleteTodo = (id: number) => {
-		// Remove a todo from our list of todos
-		todos.update((todos) => {
-			return todos.filter((todo) => todo.id !== id);
-		});
-		channel.postMessage($todos);
-	};
-
-	let name = '';
 </script>
 
-<h1 class="text-3xl">Welcome to SvelteKit</h1>
-{#if !$page.data.session}
-	<Login />
-{:else}
-	<User />
-{/if}
+<div class="flex flex-col h-screen">
+	<div class="flex justify-evenly mx-auto">
+		<button class="btn btn-ghost w-1/3" on:click={() => getFeed('https://www.tagesschau.de/export/video-podcast/webm/tagesschau_https/')} >Tagesschau</button>
+		<button class="btn btn-ghost w-1/3" on:click={() => getFeed('https://www.zdf.de/rss/podcast/video/zdf/kinder/logo')}>Logo</button>
+		<button class="btn btn-ghost w-1/3" on:click={() => getFeed('https://mediathekviewweb.de/feed?query=Aktuelles%20journal%20junior')} >Arte</button>
+		</div>
+		<video src={url} class="w-full m-auto" controls />
 
-<div>
-	<input bind:value={name} placeholder="enter your todo" />
-	<button on:click={addTodo}>Add</button>
 </div>
 
-{#each $todos as { text, id, done }, i}
-	<Todo
-		{text}
-		{id}
-		{done}
-		on:toggle={(event) => toggleTodo(event.detail.id)}
-		on:delete={(event) => deleteTodo(event.detail.id)}
-	/>
-{/each}
+
